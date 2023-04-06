@@ -1,0 +1,1 @@
+ /usr/bin/ls -1prt | grep -v "/$" | cat -n | while read n f; do mv -n "${f}" "$(printf "%d" $n).${f#*.}"; done
