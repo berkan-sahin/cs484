@@ -10,6 +10,7 @@ from torchvision.io import read_image, ImageReadMode
 import matplotlib.pyplot as plt
 import os
 from sklearn.model_selection import KFold
+import time
 
 class HockeyDataset(Dataset):
 
@@ -60,6 +61,7 @@ if __name__ == '__main__':
     dataset = HockeyDataset('dataset', preprocess)
     kfold = KFold(n_splits=fold, shuffle=True)
 
+    begin = time.time()
     for (fold, (train, test)) in enumerate(kfold.split(dataset)):
         print("Train: ", train, "Validation: ", test)
         trainloader = DataLoader(dataset, batch_size=4, sampler=train, num_workers=4)
@@ -103,7 +105,9 @@ if __name__ == '__main__':
                     running_loss += loss.item()
                     running_corrects += torch.sum(predicted == labels.data)
             print('Accuracy of the network on the 64 test images: %d %%' % (100 * running_corrects.double() / labels.size(0)))
-        print('Finished Training')
+        
+        time_elapsed = time.time() - begin
+        print(f"Finished Training, took {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s")
 
 
     
