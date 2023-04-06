@@ -50,9 +50,10 @@ preprocess = transforms.Compose([
 
 
 if __name__ == '__main__':
-    fold = 10
+    fold = 6
     epochs = 10
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print("Using device: ", device)
     vgg16 = models.vgg16()
     vgg16.load_state_dict(torch.load('vgg16.pth'))
     dataset = HockeyDataset('dataset', preprocess)
@@ -77,7 +78,22 @@ if __name__ == '__main__':
                 if i % 10 == 9:
                     print('Fold %d [%d, %5d] loss: %.3f' % (fold ,epoch + 1, i + 1, running_loss / 10))
                     running_loss = 0.0
+
+            correct = 0
+            total = 0
+            with torch.no_grad():
+                for data in valloader:
+                    images, labels = data
+                    outputs = vgg16(images)
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+            print('Accuracy of the network on the 64 test images: %d %%' % (100 * correct / total))
         print('Finished Training')
+
+
+    
+    
 
 
 
