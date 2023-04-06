@@ -56,6 +56,7 @@ if __name__ == '__main__':
     print("Using device: ", device)
     vgg16 = models.vgg16()
     vgg16.load_state_dict(torch.load('vgg16.pth'))
+    vgg16 = vgg16.to(device)
     dataset = HockeyDataset('dataset', preprocess)
     kfold = KFold(n_splits=fold, shuffle=True)
 
@@ -65,30 +66,43 @@ if __name__ == '__main__':
         valloader = DataLoader(dataset, batch_size=4, sampler=test, num_workers=4)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(vgg16.parameters(), lr=0.001)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
         for epoch in range(epochs):
+            # Training phase
+            vgg16.train()
             running_loss = 0.0
+            running_corrects = 0
             for i, data in enumerate(trainloader, 0):
                 inputs, labels = data
+                inputs = inputs.to(device)
+                labels = labels.to(device)
                 optimizer.zero_grad()
                 outputs = vgg16(inputs)
+                _, preds = torch.max(outputs, 1)
                 loss = criterion(outputs, labels.long())
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
                 running_loss += loss.item()
+                running_corrects += torch.sum(preds == labels.data)
                 if i % 10 == 9:
                     print('Fold %d [%d, %5d] loss: %.3f' % (fold ,epoch + 1, i + 1, running_loss / 10))
                     running_loss = 0.0
 
-            correct = 0
-            total = 0
+            running_loss = 0.0
+            running_corrects = 0
+            vgg16.eval()
             with torch.no_grad():
                 for data in valloader:
                     images, labels = data
+                    images = images.to(device)
+                    labels = labels.to(device)
                     outputs = vgg16(images)
                     _, predicted = torch.max(outputs.data, 1)
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
-            print('Accuracy of the network on the 64 test images: %d %%' % (100 * correct / total))
+                    loss = criterion(outputs, labels.long())
+                    running_loss += loss.item()
+                    running_corrects += torch.sum(predicted == labels.data)
+            print('Accuracy of the network on the 64 test images: %d %%' % (100 * running_corrects.double() / labels.size(0)))
         print('Finished Training')
 
 
